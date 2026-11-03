@@ -4,12 +4,30 @@
   "service": "app",
   "workspaceFolder": "/workspace",
   "postCreateCommand": "pip install --no-cache-dir -r requirements.txt",
-  "forwardPorts": [28888, 28501, 28502, 28000],
+  "forwardPorts": [
+    28888,
+    28501,
+    28502,
+    28000,
+    6080
+  ],
   "portsAttributes": {
-    "28888": { "label": "Jupyter" },
-    "28501": { "label": "Streamlit" },
-    "28502": { "label": "Streamlit (launch config)" },
-    "28000": { "label": "FastAPI" }
+    "28888": {
+      "label": "Jupyter"
+    },
+    "28501": {
+      "label": "Streamlit"
+    },
+    "28502": {
+      "label": "Streamlit (launch config)"
+    },
+    "28000": {
+      "label": "FastAPI"
+    },
+    "6080": {
+      "label": "Desktop (noVNC) - watch Playwright browsers here",
+      "onAutoForward": "notify"
+    }
   },
   "customizations": {
     "vscode": {
