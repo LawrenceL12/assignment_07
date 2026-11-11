@@ -1,8 +1,25 @@
-Write your reflection here.
+1. What I Learned
+Throughout this assignment, I developed an end-to-end data pipeline that collected unstructured and semi-structured menu data from three distinct competitor websites, reconciled disparate item nomenclature through automated fuzzy matching and a human-in-the-loop review architecture, and generated actionable competitive pricing intelligence within a multi-page Streamlit application.
 
-See reflection.md for what makes a good reflection — be specific, use the
-terminology from this assignment (HTML element, CSS selector, class and id
-selectors, sibling selector, inner_text, attribute, headless browser, waiting for
-JavaScript, crawling, pagination, read_html, melt, fuzzy matching, normalization,
-threshold, human in the loop, merge indicator, gap analysis), and make it
-actionable.
+Specifically, I gained a deep operational understanding of:
+1）Playwright and Browser Automation: I learned how a headless browser automates interaction with JavaScript-heavy client-side applications. On Canal Street Coffee, the HTML element structure is not populated on initial page load; instead, client-side scripts asynchronously fetch `menu.json` and render DOM nodes. I learned how to drive page interactions via `select_option` for shop location selection, `click` for triggering search submissions, and crucial synchronization using `wait_for_selector` and `wait_for_function` to poll for dynamic DOM changes (such as pagination via the "Show more" button) before scraping attributes (`get_attribute("href")`) to crawl detail pages.
+2）Targeted CSS Selectors and DOM Traversal: On Lakeshore Lattes, I practiced writing hierarchical CSS selector queries, leveraging class selectors (`h2.menu-section__title`, `article.menu-card`) and the general sibling selector (`~ div.menu-grid`) to navigate between section headings and their corresponding card grids without capturing irrelevant notes or layout containers.
+3）HTML Table Parsing and Reshaping with Pandas: On Hilltop Grind, scraping was simplified by using the id selector (`#menu h2`) alongside `pd.read_html` to directly parse tabular structures from page HTML. I learned how `pd.melt` converts wide drink tables (with separate columns for sizes S, M, L) into tidy long format, aligning them seamlessly with food items sized as "Each".
+4）String Cleaning and Normalization: Real-world text scraped via `inner_text` includes UI noise, badge lines ("NEW!"), and dietary tags ("V", "GF"). I built regular-expression parsers (`re.findall`) to extract size labels and currency amounts, standardizing scraped strings into numerical float values.
+5）Fuzzy Matching and Keeping a Human in the Loop: Matching names across competitors highlighted the limitations of pure syntactic similarity. Normalization (stripping NFKD accents, removing punctuation, and filtering domain-specific `FILLER_WORDS` such as "caffe" and "coffee") was essential before scoring with `rapidfuzz`'s `fuzz.token_sort_ratio`. Setting confidence thresholds (`AUTO_MATCH` at 90, `REVIEW` at 70) allowed high-confidence matches (like "Cappucino" -> "Cappuccino") to match automatically while routing ambiguous cases ("Matcha Latte" vs "Mocha Latte", or abbreviations like "PSL") to the human-in-the-loop review workflow, persisting verified mappings into `item_matches.csv`.
+6）Relational Merges and Gap Analysis: In downstream analysis, I utilized `pd.merge` with `indicator=True` to categorize market offerings into "only us", "only them", and "both", grouping rival listings to identify menu gaps (e.g., Avocado Toast offered across all three competitors).
+
+2. Where I Struggled and What Confused Me
+1）Dynamic Waiting and Race Conditions in Headless Crawling: The biggest initial hurdle was orchestrating the pagination on Canal Street Coffee. Using static waits or naive selector checks often resulted in reading cards before the subsequent batch had finished appending to the DOM. Implementing `page.wait_for_function(f"document.querySelectorAll('a.result-card').length > {count}")` resolved this race condition by ensuring the browser loop waited strictly until the DOM count actually incremented.
+2）Subtleties of Fuzzy String Scoring: It was counterintuitive that "Matcha Latte" scored 87 against "Mocha Latte" (only one vowel difference), even though they represent entirely different beverages, while "PSL" scored 0 against "Pumpkin Spice Latte". This vividly demonstrated why autonomous algorithmic matching without human-in-the-loop oversight is hazardous for business-critical decision making.
+3）Preserving Category Types in Merge Indicators**: When performing the outer merge for `gap_analysis`, pandas' categorical `_merge` column initially retained categorical ordering constraints, requiring an explicit `.astype(str)` cast before applying custom sorting mappings.
+
+3. Where I Need More Practice
+1）Complex CSS Combinators and XPath Fallbacks: While class, id, and sibling selectors (`~`) worked cleanly here, I want more fluency with adjacent sibling combinators (`+`) and structural pseudo-classes (`:nth-of-type`) when dealing with poorly structured legacy HTML that lacks semantic class attributes.
+2）Robust Multi-Page Asynchronous Crawling: Crawling 35+ detail links sequentially took significant test execution time. I need more practice leveraging asynchronous Playwright (`async_playwright` with `asyncio.gather`) to crawl links concurrently while respecting server rate limits and managing concurrency pools safely.
+3）Designing Resilient Match Heuristics: I want to practice implementing hybrid matching algorithms that combine token-based phonetic algorithms (like Metaphone or Double Metaphone) with token sort ratios and domain taxonomic embeddings.
+
+4. Actionable Next Steps
+1）Build a Local Playwright Playground: Create a mock portfolio of web applications containing infinite scroll, shadow DOM components, and multi-step modal dialogs to practice writing reliable `wait_for_selector` and custom JavaScript predicate wait conditions.
+2）Experiment with Async Playwright: Re-implement `scrape_canal` using Python's `asyncio` and `playwright.async_api` to measure performance improvements when fetching item detail pages concurrently with an `asyncio.Semaphore(5)`.
+3）Deep Dive into Pandas Vectorization and Categoricals: Review the Pandas documentation on categorical data sorting and `pivot_table` multi-index handling to reinforce writing clean, loop-free data transformation pipelines.
